@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Карта мусорных контейнеров Симферополя</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 350px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            overflow-y: auto;
+            z-index: 1000;
+            padding: 15px;
+            transition: transform 0.3s;
+        }
+        #map {
+            margin-left: 350px;
+            height: 100vh;
+            transition: margin-left 0.3s;
+        }
+        .point-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .point-item:hover {
+            background: #f5f5f5;
+        }
+        .search-box {
+            margin-bottom: 15px;
+        }
+        .filter-options {
+            margin-bottom: 15px;
+        }
+        .info {
+            padding: 8px 12px;
+            font: 14px/16px Arial, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            max-width: 300px;
+        }
+        .info h4 {
+            margin: 0 0 8px;
+            color: #333;
+        }
+        .hidden {
+            transform: translateX(-100%);
+        }
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .map-control {
+            background: #fff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            margin-bottom: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #555;
+        }
+        .legend-container {
+            position: absolute;
+            bottom: 40px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .toggle-panel {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            background: #fff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #555;
+            z-index: 1001;
+        }
+        .toggle-legend {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: #fff;
+            border: none;
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #555;
+            z-index: 1001;
+        }
+        .legend {
+            background: white;
+            background: rgba(255,255,255,0.95);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            margin-bottom: 10px;
+            max-width: 200px;
+        }
+        .legend.hidden {
+            display: none;
+        }
+        .panel.hidden {
+            transform: translateX(-100%);
+        }
+        .leaflet-container {
+            background: #f8f9fa !important;
+        }
+        @media (max-width: 768px) {
+            #sidebar {
+                width: 280px;
+            }
+            #map {
+                margin-left: 280px;
+            }
+            .legend {
+                max-width: 150px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar" class="panel">
+        <h2>Мусорные контейнеры</h2>
+        <div class="search-box">
+            <input type="text" id="search" placeholder="Поиск по адресу..." style="width: 100%; padding: 8px;">
+        </div>
+        <div class="filter-options">
+            <h4>Фильтры:</h4>
+            <select id="type-filter" style="width: 100%; padding: 5px; margin-bottom: 5px;">
+                <option value="all">Все типы покрытия</option>
+                <option value="Асфальт">Асфальт</option>
+                <option value="Бетон">Бетон</option>
+                <option value="Асфальтобетон">Асфальтобетон</option>
+                <option value="Земля">Земля</option>
+            </select>
+            <select id="capacity-filter" style="width: 100%; padding: 5px;">
+                <option value="all">Любое количество контейнеров</option>
+                <option value="1-3">1-3 контейнера</option>
+                <option value="4-6">4-6 контейнеров</option>
+                <option value="7+">7+ контейнеров</option>
+            </select>
+        </div>
+        <div id="points-list">
+            <!-- Точки будут добавлены здесь -->
+        </div>
+    </div>
+    <div id="map"></div>
+
+    <button class="toggle-panel" id="toggle-panel" title="Свернуть/развернуть панель"><i class="fas fa-list"></i></button>
+
+    <div class="map-controls">
+        <button class="map-control" id="zoom-in" title="Увеличить"><i class="fas fa-plus"></i></button>
+        <button class="map-control" id="zoom-out" title="Уменьшить"><i class="fas fa-minus"></i></button>
+        <button class="map-control" id="toggle-map" title="Переключить вид"><i class="fas fa-layer-group"></i></button>
+    </div>
+
+    <div class="legend-container">
+        <div class="legend" id="legend">
+            <h4>Легенда</h4>
+            <i class="fas fa-trash-alt" style="color: blue;"></i> Асфальт<br>
+            <i class="fas fa-trash-alt" style="color: green;"></i> Бетон<br>
+            <i class="fas fa-trash-alt" style="color: purple;"></i> Асфальтобетон<br>
+            <i class="fas fa-trash-alt" style="color: orange;"></i> Другое покрытие<br>
+            <hr>
+            Кластеры показывают плотность объектов
+        </div>
+        <button class="toggle-legend" id="toggle-legend" title="Свернуть/развернуть легенду"><i class="fas fa-list"></i></button>
+    </div>
+
+    <script>
+        // Создаем карту с центром в Симферополе
+        var map = L.map('map', {
+            renderer: L.canvas(), // Используем Canvas renderer для лучшей производительности
+            preferCanvas: true, // Используем Canvas для маркеров
+            zoomControl: false // Отключаем стандартный контрол зума
+        }).setView([44.952116, 34.102411], 13);
+
+        // Добавляем базовые слои
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        });
+
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        });
+
+        // Добавляем слой по умолчанию
+        osmLayer.addTo(map);
+
+        // Создаем кластеризатор
+        var markers = L.markerClusterGroup({
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            disableClusteringAtZoom: 18
+        });
+        var markerList = [];
+
+        // Функция для создания HTML-контента всплывающего окна
+        function createPopupContent(props) {
+            return `
+                <div class="info">
+                    <h4>Контейнер №${props['№п/п']}</h4>
+                    <b>Адрес:</b> ${props['Адрес']}<br>
+                    <b>Площадь:</b> ${props['Площ'] || 'н/д'} м²<br>
+                    <b>Контейнеров:</b> ${props['Смеш'] || 'н/д'}<br>
+                    <b>Покрытие:</b> ${props['покры'] || 'н/д'}<br>
+                    <b>Обслуживание:</b> ${props['Обслу'] || 'н/д'}<br>
+                    <b>Собственник:</b> ${props['Собст'] || 'н/д'}
+                </div>
+            `;
+        }
+
+        // Функция для загрузки GeoJSON данных
+        function loadGeoJSONData() {
+            fetch('data.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    // Обрабатываем каждую точку из GeoJSON
+                    data.features.forEach(function(feature) {
+                        var props = feature.properties;
+                        
+                        // Используем уже готовые координаты в WGS84 из свойств
+                        var lat = props['СШ']; // Широта
+                        var lon = props['ВД']; // Долгота
+                        
+                        // Создаем маркер
+                        var marker = L.marker([lat, lon], {
+                            icon: L.divIcon({
+                                html: `<i class="fas fa-trash-alt" style="color: ${
+                                    props['покры'] === 'Асфальт' ? 'blue' : 
+                                    props['покры'] === 'Бетон' ? 'green' : 
+                                    props['покры'] === 'Асфальтобетон' ? 'purple' : 'orange'
+                                }; font-size: 18px;"></i>`,
+                                iconSize: [18, 18],
+                                className: 'my-div-icon'
+                            }),
+                            renderer: L.canvas() // Используем Canvas для маркера
+                        }).bindPopup(createPopupContent(props));
+                        
+                        markers.addLayer(marker);
+                        markerList.push({
+                            marker: marker,
+                            props: props
+                        });
+
+                        // Добавляем точку в список
+                        var item = document.createElement('div');
+                        item.className = 'point-item';
+                        item.innerHTML = `
+                            <strong>№${props['№п/п']}</strong>: ${props['Адрес']}<br>
+                            <small>${props['покры'] || 'н/д'}, ${props['Смеш'] || 'н/д'} контейнеров</small>
+                        `;
+                        item.onclick = function() {
+                            map.setView([lat, lon], 18);
+                            marker.openPopup();
+                        };
+                        document.getElementById('points-list').appendChild(item);
+                    });
+
+                    // Добавляем кластер на карту
+                    map.addLayer(markers);
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки GeoJSON:', error);
+                    alert('Не удалось загрузить данные о мусорных контейнерах');
+                });
+        }
+
+        // Загружаем данные при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGeoJSONData();
+            
+            // Принудительное обновление карты после загрузки
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+        });
+
+        // Поиск по адресу
+        document.getElementById('search').addEventListener('input', function(e) {
+            var searchText = e.target.value.toLowerCase();
+            var items = document.querySelectorAll('.point-item');
+            
+            items.forEach(function(item, index) {
+                var props = markerList[index].props;
+                var address = props['Адрес'].toLowerCase();
+                if (address.includes(searchText)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        // Фильтрация по типу покрытия
+        document.getElementById('type-filter').addEventListener('change', function(e) {
+            filterMarkers();
+        });
+
+        // Фильтрация по количеству контейнеров
+        document.getElementById('capacity-filter').addEventListener('change', function(e) {
+            filterMarkers();
+        });
+
+        // Функция фильтрации маркеров
+        function filterMarkers() {
+            var typeFilter = document.getElementById('type-filter').value;
+            var capacityFilter = document.getElementById('capacity-filter').value;
+            
+            markers.clearLayers();
+            
+            markerList.forEach(function(item) {
+                var props = item.props;
+                var show = true;
+                
+                // Фильтр по типу покрытия
+                if (typeFilter !== 'all' && props['покры'] !== typeFilter) {
+                    show = false;
+                }
+                
+                // Фильтр по количеству контейнеров
+                if (capacityFilter !== 'all') {
+                    var capacity = props['Смеш'] || 0;
+                    if (capacityFilter === '1-3' && (capacity < 1 || capacity > 3)) {
+                        show = false;
+                    } else if (capacityFilter === '4-6' && (capacity < 4 || capacity > 6)) {
+                        show = false;
+                    } else if (capacityFilter === '7+' && capacity < 7) {
+                        show = false;
+                    }
+                }
+                
+                if (show) {
+                    markers.addLayer(item.marker);
+                }
+            });
+            
+            map.addLayer(markers);
+        }
+
+        // Кнопка скрытия/показа боковой панели
+        document.getElementById('toggle-panel').addEventListener('click', function() {
+            var sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            
+            if (sidebar.classList.contains('hidden')) {
+                document.getElementById('map').style.marginLeft = '0';
+            } else {
+                document.getElementById('map').style.marginLeft = '350px';
+            }
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 300);
+        });
+
+        // Кнопки увеличения/уменьшения масштаба
+        document.getElementById('zoom-in').addEventListener('click', function() {
+            map.zoomIn();
+        });
+
+        document.getElementById('zoom-out').addEventListener('click', function() {
+            map.zoomOut();
+        });
+
+        // Кнопка переключения между картой и спутниковыми снимками
+        var currentLayer = osmLayer;
+        document.getElementById('toggle-map').addEventListener('click', function() {
+            if (currentLayer === osmLayer) {
+                map.removeLayer(osmLayer);
+                satelliteLayer.addTo(map);
+                currentLayer = satelliteLayer;
+                this.innerHTML = '<i class="fas fa-map"></i>';
+                this.title = "Переключить на карту";
+            } else {
+                map.removeLayer(satelliteLayer);
+                osmLayer.addTo(map);
+                currentLayer = osmLayer;
+                this.innerHTML = '<i class="fas fa-layer-group"></i>';
+                this.title = "Переключить на спутник";
+            }
+        });
+
+        // Кнопка скрытия/показа легенды
+        document.getElementById('toggle-legend').addEventListener('click', function() {
+            var legend = document.getElementById('legend');
+            legend.classList.toggle('hidden');
+        });
+
+        // Обработка проблем с загрузкой тайлов
+        map.on('tileerror', function(e) {
+            console.warn('Ошибка загрузки тайла:', e.url);
+        });
+
+        // Принудительное обновление карты при изменении размера окна
+        window.addEventListener('resize', function() {
+            map.invalidateSize();
+        });
+    </script>
+</body>
+</html>
