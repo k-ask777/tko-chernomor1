@@ -247,12 +247,12 @@
             return `
                 <div class="info">
                     <h4>Контейнер №${props['№п/п']}</h4>
-                    <b>Адрес:</b> ${props['Адрес']}<br>
-                    <b>Площадь:</b> ${props['Площ'] || 'н/д'} м²<br>
-                    <b>Контейнеров:</b> ${props['Смеш'] || 'н/д'}<br>
-                    <b>Покрытие:</b> ${props['покры'] || 'н/д'}<br>
-                    <b>Обслуживание:</b> ${props['Обслуж'] || 'н/д'}<br>
-                    <b>Собственник:</b> ${props['Собств'] || 'н/д'}
+                    <b>Адрес:</b> ${props['Adres']}<br>
+                    <b>Площадь:</b> ${props['Area'] || 'н/д'} м²<br>
+                    <b>Контейнеров:</b> ${props['Konteyner'] || 'н/д'}<br>
+                    <b>Покрытие:</b> ${props['Pokrit'] || 'н/д'}<br>
+                    <b>Обслуживание:</b> ${props['Obslug'] || 'н/д'}<br>
+                    <b>Собственник:</b> ${props['Sobstven'] || 'н/д'}
                 </div>
             `;
         }
@@ -274,9 +274,9 @@
                         var marker = L.marker([lat, lon], {
                             icon: L.divIcon({
                                 html: `<i class="fas fa-trash-alt" style="color: ${
-                                    props['покры'] === 'Асфальт' ? 'blue' : 
-                                    props['покры'] === 'Бетон' ? 'green' : 
-                                    props['покры'] === 'Асфальтобетон' ? 'purple' : 'orange'
+                                    props['Pokrit'] === 'Асфальт' ? 'blue' : 
+                                    props['Pokrit'] === 'Бетон' ? 'green' : 
+                                    props['Pokrit'] === 'Асфальтобетон' ? 'purple' : 'orange'
                                 }; font-size: 18px;"></i>`,
                                 iconSize: [18, 18],
                                 className: 'my-div-icon'
@@ -294,8 +294,8 @@
                         var item = document.createElement('div');
                         item.className = 'point-item';
                         item.innerHTML = `
-                            <strong>№${props['№п/п']}</strong>: ${props['Адрес']}<br>
-                            <small>${props['покры'] || 'н/д'}, ${props['Смеш'] || 'н/д'} контейнеров</small>
+                            <strong>№${props['№п/п']}</strong>: ${props['Adres']}<br>
+                            <small>${props['Pokrit'] || 'н/д'}, ${props['Konteyner'] || 'н/д'} контейнеров</small>
                         `;
                         item.onclick = function() {
                             map.setView([lat, lon], 18);
@@ -330,7 +330,7 @@
             
             items.forEach(function(item, index) {
                 var props = markerList[index].props;
-                var address = props['Адрес'].toLowerCase();
+                var address = props['Adres'].toLowerCase();
                 if (address.includes(searchText)) {
                     item.style.display = 'block';
                 } else {
@@ -361,13 +361,13 @@
                 var show = true;
                 
                 // Фильтр по типу покрытия
-                if (typeFilter !== 'all' && props['покры'] !== typeFilter) {
+                if (typeFilter !== 'all' && props['Pokrit'] !== typeFilter) {
                     show = false;
                 }
                 
                 // Фильтр по количеству контейнеров
                 if (capacityFilter !== 'all') {
-                    var capacity = props['Смеш'] || 0;
+                    var capacity = props['Konteyner'] || 0;
                     if (capacityFilter === '1-3' && (capacity < 1 || capacity > 3)) {
                         show = false;
                     } else if (capacityFilter === '4-6' && (capacity < 4 || capacity > 6)) {
