@@ -244,18 +244,24 @@
 
         // Функция для создания HTML-контента всплывающего окна
         function createPopupContent(props) {
-            return `
-                <div class="info">
-                    <h4>Контейнер №${props['№п/п']}</h4>
-                    <b>Адрес:</b> ${props['Adres']}<br>
-                    <b>Площадь:</b> ${props['Area'] || 'н/д'} м²<br>
-                    <b>Контейнеров:</b> ${props['Konteyner'] || 'н/д'}<br>
-                    <b>Покрытие:</b> ${props['Pokrit'] || 'н/д'}<br>
-                    <b>Обслуживание:</b> ${props['Obslug'] || 'н/д'}<br>
-                    <b>Собственник:</b> ${props['Sobstven'] || 'н/д'}
-                </div>
-            `;
-        }
+    let siteLink = '';
+    if (props['Site'] && props['Site'] !== 'null') {
+        siteLink = `<b>Сайт:</b> <a href="${props['Site']}" target="_blank" rel="noopener">${props['Site']}</a><br>`;
+    }
+    
+    return `
+        <div class="info">
+            <h4>Контейнер №${props['№п/п']}</h4>
+            <b>Адрес:</b> ${props['Adres']}<br>
+            ${siteLink}
+            <b>Площадь:</b> ${props['Area'] || 'н/д'} м²<br>
+            <b>Контейнеров:</b> ${props['Konteyner'] || 'н/д'}<br>
+            <b>Покрытие:</b> ${props['Pokrit'] || 'н/д'}<br>
+            <b>Обслуживание:</b> ${props['Obslug'] || 'н/д'}<br>
+            <b>Собственник:</b> ${props['Sobstven'] || 'н/д'}
+        </div>
+    `;
+}
 
         // Функция для загрузки GeoJSON данных
         function loadGeoJSONData() {
